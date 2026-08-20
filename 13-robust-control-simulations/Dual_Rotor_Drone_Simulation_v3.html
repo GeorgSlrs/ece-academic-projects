@@ -1,0 +1,57 @@
+<!-- ===============================================================
+     Dual-Rotor Drone – Fixed-PID Robust-Control Demo
+     ---------------------------------------------------------------
+     • “Box at (0,0)”   : visual target the craft must settle on
+     • Spinning rotors  : black disks that rotate with thrust
+     • PID gains        : hard-coded from MATLAB script
+     • Drag coefficients: user-adjustable b_x, b_y  (N·s m⁻¹)
+     • Integration      : simple Forward-Euler
+     =============================================================== -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dual-Rotor Drone – Robust-Control Demo</title>
+<style>
+body{margin:0;font-family:monospace;background:#eef1ff;display:flex;flex-direction:column;align-items:center}
+h1{margin:.8rem;font-size:1.5rem}canvas{border:2px solid #132;background:#eef1ff}
+#readout{white-space:pre;background:#fff;padding:.5rem;border-radius:4px;box-shadow:0 2px 5px rgba(0,0,0,.2);margin:.5rem}
+#controls{display:flex;flex-wrap:wrap;gap:.6rem;margin-bottom:.6rem}label{font-size:.9rem}input,button{font-family:inherit;font-size:.9rem}
+button{padding:.4rem .8rem;border:none;border-radius:4px;background:#3367d6;color:#fff;cursor:pointer}button:active{transform:scale(.96)}
+</style>
+</head>
+<body>
+<h1>Dual-Rotor Drone – Robust-Control Demo</h1>
+<canvas id="canvas" width="900" height="460"></canvas>
+<pre id="readout"></pre>
+<div id="controls">
+<button id="btnStart">Start</button><button id="btnReset">Reset</button>
+<label>b<sub>x</sub> (N·s/m): <input id="bxInput" type="number" value="0" step="0.05"></label>
+<label>b<sub>y</sub> (N·s/m): <input id="byInput" type="number" value="0" step="0.05"></label>
+<label>Noise σ: <input id="noiseSlider" type="range" min="0" max="0.1" step="0.005" value="0.01"></label>
+<label>Disturbance: <input id="distSlider" type="range" min="0" max="1" step="0.05" value="0.2"></label>
+</div>
+<script>
+const m=1.0,I=.1,l=.1,g=9.81;
+const gains={y:{Kp:15,Ki:0,Kd:10},t:{Kp:15,Ki:0,Kd:7.5},x:{Kp:.8,Ki:0,Kd:1.5}};
+const dt=.02;
+let s={x:0,y:0,th:0,dx:0,dy:0,dth:0};
+let intY=0,intT=0,intX=0,thetaRef=0;
+let noiseStd=parseFloat(noiseSlider.value),distAmp=parseFloat(distSlider.value),bx=parseFloat(bxInput.value),by=parseFloat(byInput.value);
+function randn(){const u1=Math.random(),u2=Math.random();return Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2)}
+function controller(){
+ bx=parseFloat(bxInput.value);by=parseFloat(byInput.value);
+ const xM=s.x+noiseStd*randn(),yM=s.y+noiseStd*randn(),thM=s.th+noiseStd*randn();
+ const eX=-xM,dX=-s.dx,eY=-yM,dY=-s.dy;intX+=eX*dt;intY+=eY*dt;
+ thetaRef=gains.x.Kp*eX+gains.x.Kd*dX;const maxPitch=10*Math.PI/180;thetaRef=Math.max(-maxPitch,Math.min(maxPitch,thetaRef));
+ const eT=thetaRef-thM,dT=-s.dth;intT+=eT*dt;const dM=gains.t.Kp*eT+gains.t.Kd*dT;const dTtot=gains.y.Kp*eY+gains.y.Kd*dY;
+ let uSum=m*g+dTtot,uDiff=dM/l,u1=(uSum-uDiff)/2,u2=(uSum+uDiff)/2;u1=Math.max(0,Math.min(20,u1));u2=Math.max(0,Math.min(20,u2));return{u1,u2};
+}
+function step(u){const T=u.u1+u.u2,Mz=l*(u.u2-u.u1);const ddx=-(T*Math.sin(s.th))/m-bx*s.dx/m,ddy=(T*Math.cos(s.th))/m-g-by*s.dy/m,ddth=Mz/I+distAmp*randn();s.dx+=ddx*dt;s.x+=s.dx*dt;s.dy+=ddy*dt;s.y+=s.dy*dt;s.dth+=ddth*dt;s.th+=s.dth*dt}
+const cvs=document.getElementById('canvas'),ctx=cvs.getContext('2d'),PX_PER_M=120;function py(m){return cvs.height/2-m*PX_PER_M}
+function draw(u){ctx.clearRect(0,0,cvs.width,cvs.height);const tx=cvs.width/2,ty=py(0);ctx.fillStyle='#b2ffb2';ctx.fillRect(tx-25,ty-12,50,24);const cx=cvs.width/2+s.x*PX_PER_M,cy=py(s.y);ctx.save();ctx.translate(cx,cy);ctx.rotate(s.th);ctx.fillStyle='#222';ctx.fillRect(-30,-5,60,10);ctx.restore();const rotor=(sgn,f)=>{ctx.save();ctx.translate(cx+sgn*25*Math.cos(s.th),cy+sgn*25*Math.sin(s.th));ctx.rotate(f*40%6.283);ctx.fillStyle='#000';ctx.beginPath();ctx.arc(0,0,8,0,2*Math.PI);ctx.fill();ctx.restore()};rotor(-1,u.u1);rotor(1,u.u2);ctx.strokeStyle='red';ctx.lineWidth=2;[-1,1].forEach((sgn,i)=>{const f=i?u.u2:u.u1;ctx.beginPath();ctx.moveTo(cx+sgn*15*Math.cos(s.th),cy+sgn*15*Math.sin(s.th));ctx.lineTo(cx+sgn*15*Math.cos(s.th)-f*3*Math.sin(s.th),cy+sgn*15*Math.sin(s.th)+f*3*Math.cos(s.th));ctx.stroke()});readout.textContent=`x (m): ${s.x.toFixed(2)}\ny (m): ${s.y.toFixed(2)}\nθ (deg): ${(s.th*180/Math.PI).toFixed(1)}\nẋ (m/s): ${s.dx.toFixed(2)}\nẏ (m/s): ${s.dy.toFixed(2)}\nθ̇ (deg/s): ${(s.dth*180/Math.PI).toFixed(1)}\nu₁,u₂ (N): ${u.u1.toFixed(1)} , ${u.u2.toFixed(1)}\nbₓ,bᵧ: ${bx.toFixed(2)} , ${by.toFixed(2)}\nθ_ref (deg): ${(thetaRef*180/Math.PI).toFixed(1)}`}
+let running=false;function loop(){if(running){const u=controller();step(u);draw(u)}requestAnimationFrame(loop)}requestAnimationFrame(loop);
+btnStart.onclick=()=>{running=!running;btnStart.textContent=running?'Pause':'Start'};btnReset.onclick=()=>{s={x:0,y:0,th:0,dx:0,dy:0,dth:0};intX=intY=intT=thetaRef=0;running=false;btnStart.textContent='Start';draw({u1:0,u2:0})};noiseSlider.oninput=e=>noiseStd=parseFloat(e.target.value);distSlider.oninput=e=>distAmp=parseFloat(e.target.value);draw({u1:0,u2:0});
+</script>
+</body>
+</html>
