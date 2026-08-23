@@ -1,0 +1,9 @@
+Γιώργος Π: BASE_model.py
+	Crack_Detector.py
+	(visualization both)
+x Evaluation.py
+ 
+Κορομηλάς: dataset.py
+	   Checkdataset.py
+
+Εγώ setup.py

@@ -26,6 +26,9 @@ val_cardinality = dataManager.get_val_cardinality()
 
 print(f"Cardinalities: \n train: {train_cardinality} \n validaton: {val_cardinality} \n test: {test_cardinality}")
 
+
+
+
 model = BASE_Model()
 model.compile()
 model.summary()
@@ -36,3 +39,6 @@ history = model.fit(train_data,
                     epochs=5)
 model.save("6thTry.keras")
 model.evaluate(test_data=test_data)
+
+
+

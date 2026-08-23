@@ -1,6 +1,10 @@
 __pycache__/
 *.py[cod]
-.ipynb_checkpoints/
+.venv/
+venv/
+env/
+*.exe
+*.class
 .DS_Store
-.env
-*.log
+Thumbs.db
+~$*

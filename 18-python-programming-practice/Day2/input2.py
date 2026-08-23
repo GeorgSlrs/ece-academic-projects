@@ -1,0 +1,5 @@
+myName = input("What is your name?: ")
+myAge = input("What is your age?: ")
+print("You are old lol")
+reply = input("Do you like coding?")
+print("ofc you do!")

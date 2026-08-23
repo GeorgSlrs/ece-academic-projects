@@ -1,0 +1,55 @@
+1. sep, end in print
+2. .strip(), .title(), .capitalize()
+3. int, float
+4. # and """ """ for coments
+5. f strings
+6. .2f -2 decimal points accuracy
+7.round(x,y) rounds x to y decimal points
+8. {z:.2f}
+9. terminal
+10. def function_name(...):
+	..
+	..
+11.πρώτα τη Main
+12. if ... :
+	...
+13. or and
+14. flip 60 < x < 50
+15. return True/False χωρίς ;
+16. πρώτα τη main και μετά τις υπόλοιπες συναρτήσεις
+17.  pythonic
+18. match x:
+	case y | a | b:
+		..
+	case z:                            
+		..
+	case _:
+		..
+19. find and replace
+20. while x:
+22. ctrl + c to stop the code
+23. split
+24. += -=
+25 lists
+26. for x in ...... :
+27. range -> to x-1
+28. _ variable  ->that is used only in loops
+29. continue / break
+30. dicts {a:b,  (keys, values)
+	   c:d, 
+	  {
+		}
+
+
+31. None
+32. pass
+33. try:   
+    except:
+34. ValueError NameError SyntaxError
+35. break continue
+36.raise
+37.random: random.choice(seq)
+38. import / from .... import
+39. PyPI: contains third party-libraries cowsay      
+40. what is an API?
+41. requests - package to make web requests                                                                                                                                                

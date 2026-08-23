@@ -1,0 +1,84 @@
+<?xml version="1.0"?>
+<robot name="minitaur">
+  <link name="base_link">
+    <inertial>
+      <mass value="2.4"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.015" iyy="0.02" izz="0.025"/>
+    </inertial>
+  </link>
+
+  <!-- Front-Left Leg -->
+  <link name="front_left_hip_link"/>
+  <joint name="front_left_hip_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="front_left_hip_link"/>
+    <origin xyz="0.1 0.05 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.0" upper="1.0" effort="5" velocity="10"/>
+  </joint>
+
+  <link name="front_left_knee_link"/>
+  <joint name="front_left_knee_joint" type="revolute">
+    <parent link="front_left_hip_link"/>
+    <child link="front_left_knee_link"/>
+    <origin xyz="0 0 -0.15" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.0" upper="1.0" effort="5" velocity="10"/>
+  </joint>
+
+  <!-- Repeat for Front-Right, Rear-Left, Rear-Right legs -->
+  <link name="front_right_hip_link"/>
+  <joint name="front_right_hip_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="front_right_hip_link"/>
+    <origin xyz="0.1 -0.05 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.0" upper="1.0" effort="5" velocity="10"/>
+  </joint>
+
+  <link name="front_right_knee_link"/>
+  <joint name="front_right_knee_joint" type="revolute">
+    <parent link="front_right_hip_link"/>
+    <child link="front_right_knee_link"/>
+    <origin xyz="0 0 -0.15" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.0" upper="1.0" effort="5" velocity="10"/>
+  </joint>
+
+  <link name="rear_left_hip_link"/>
+  <joint name="rear_left_hip_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="rear_left_hip_link"/>
+    <origin xyz="-0.1 0.05 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.0" upper="1.0" effort="5" velocity="10"/>
+  </joint>
+
+  <link name="rear_left_knee_link"/>
+  <joint name="rear_left_knee_joint" type="revolute">
+    <parent link="rear_left_hip_link"/>
+    <child link="rear_left_knee_link"/>
+    <origin xyz="0 0 -0.15" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.0" upper="1.0" effort="5" velocity="10"/>
+  </joint>
+
+  <link name="rear_right_hip_link"/>
+  <joint name="rear_right_hip_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="rear_right_hip_link"/>
+    <origin xyz="-0.1 -0.05 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.0" upper="1.0" effort="5" velocity="10"/>
+  </joint>
+
+  <link name="rear_right_knee_link"/>
+  <joint name="rear_right_knee_joint" type="revolute">
+    <parent link="rear_right_hip_link"/>
+    <child link="rear_right_knee_link"/>
+    <origin xyz="0 0 -0.15" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.0" upper="1.0" effort="5" velocity="10"/>
+  </joint>
+</robot>

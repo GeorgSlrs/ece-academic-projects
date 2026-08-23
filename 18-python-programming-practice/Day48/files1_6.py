@@ -1,0 +1,6 @@
+f = open("savedFoal.txt", "a")
+whatText = input("> ")
+f.write(f"{whatText}\n")
+whatText = input("> ")
+f.write(f"{whatText}\n")
+f.close()

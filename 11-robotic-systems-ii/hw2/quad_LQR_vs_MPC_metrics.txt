@@ -1,0 +1,11 @@
+LQR metrics:
+  xy_rms: 0.2362654125940535
+  theta_max_deg: 12.867960014054987
+  effort: 1932.7842303761765
+  sat_count: 5
+
+MPC metrics:
+  xy_rms: 4.590654265371222
+  theta_max_deg: 10.961601329254446
+  effort: 1911.9449696614834
+  sat_count: 8

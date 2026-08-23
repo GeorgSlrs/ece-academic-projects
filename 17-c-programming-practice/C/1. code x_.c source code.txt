@@ -1,0 +1,10 @@
+1. code x_.c source code
+2. make x - source code to machine code
+3. ./x to run
+4.clear
+5. mv, rm, rmdir, mkdir, ls, cd, cp
+6. do {....} while ;
+7. clang -0 hello hello.c   -lx   ./hello 
+x: x.h - third party library (δε ξεχνάω το include) η make αυτοματοποιεί τη διαδικασία
+8.preprocessing compiling 
+9. Μια μεταβλητή στη C μπορεί να χρησιμοποιηθεί μέσα στα πιο πρόσφατα {}
