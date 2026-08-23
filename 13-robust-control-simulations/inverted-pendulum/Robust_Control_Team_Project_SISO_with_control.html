@@ -1,0 +1,291 @@
+<!-- ==============================================================
+ Inverted Pendulum – θ-Only SISO Playground
+  • One actuator  (F  = horizontal force on the cart)
+  • One regulated output (θ = pendulum angle)
+  • Everything rendered with the Canvas 2D API
+  • No external libraries
+ ============================================================== -->
+ <!DOCTYPE html>
+ <html lang="en">
+ <head>
+ <meta charset="UTF-8" />
+ <title>Inverted Pendulum – SISO Robust Control Playground</title>
+ <style>
+ /* -------- basic page layout -------- */
+ body{
+   margin:0;
+   font-family:monospace;
+   background:#eef1ff;
+   display:flex;
+   flex-direction:column;
+   align-items:center;
+ }
+ h1{margin:0.3rem;font-size:1.7rem}
+ canvas{                 /* track = bottom border */
+   border-bottom:4px solid #132;
+   background:#eef1ff;
+ }
+ #readout{
+   white-space:pre;
+   background:#fff;
+   padding:0.5rem 0.7rem;
+   border-radius:6px;
+   box-shadow:0 2px 5px rgba(0,0,0,0.25);
+   font-size:0.9rem;
+   margin:0.3rem;
+ }
+ #controls{
+   display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.4rem;
+   align-items:center;
+ }
+ button,select{
+   font-family:inherit;font-size:0.85rem;
+   padding:0.35rem 0.8rem;border:none;border-radius:4px;
+   background:#3367d6;color:#fff;cursor:pointer;
+ }
+ button:active{transform:scale(0.96)}
+ select{background:#3367d6;color:#fff}
+ label{font-size:0.82rem;color:#111;display:flex;align-items:center;gap:0.3rem}
+ input[type=range]{vertical-align:middle}
+ </style>
+ </head>
+ <body>
+ <h1>Inverted Pendulum – θ-Only SISO Playground</h1>
+ 
+ <!-- 2-D drawing surface -->
+ <canvas id="canvas" width="900" height="360"></canvas>
+ 
+ <!-- live numerical read-out -->
+ <pre id="readout"></pre>
+ 
+ <!-- UI controls -->
+ <div id="controls">
+   <button id="btnStart">Start</button>
+   <button id="btnReset">Reset</button>
+   <label>controller:
+     <select id="ctrlSelect">
+       <option value="P">P</option>
+       <option value="PI">PI</option>
+       <option value="PD" selected>PD</option>
+       <option value="PID">PID</option>
+       <option value="INV">Inverse-Dyn</option>
+     </select>
+   </label>
+   <label>noise&nbsp;σ (rad): <input id="noiseSlider" type="range" min="0" max="0.03" step="0.001" value="0.005"></label>
+   <label>dist&nbsp;gain: <input id="distSlider" type="range" min="0" max="0.05" step="0.002" value="0.01"></label>
+ </div>
+ 
+ <script>
+ /* ================================================================
+  * 1  PHYSICAL CONSTANTS (SI) ———————————————
+  *     Values roughly follow many lab demos (e.g. CTMS example).
+  * ================================================================ */
+ const par = {
+   M : 0.5,    // cart mass (kg)
+   m : 0.2,    // pendulum mass (kg)
+   l : 0.3,    // distance to COM (m)
+   g : 9.81    // gravity (m s⁻²)
+ };
+ 
+ /* ================================================================
+  * 2  GAINS for each controller type (un-scaled)
+  *     Derived in the explanation below (PD via pole-placement).
+  * ================================================================ */
+ const gains = {
+   P  : {Kp: 60},
+   PI : {Kp: 1,  Ki:1.2},
+   PD : {Kp: 300,  Kd: 100},
+   PID: {Kp: 60,  Ki:100, Kd:12},
+   INV: {Kp:  6,  Kd:  1}       // used by inverse-dynamics inner loop
+ };
+ 
+ /* ================================================================
+  * 3  STATE, SIMULATION CLOCK & MISC
+  * ================================================================ */
+ let s = {x:-0.4, dx:0, theta:-0.25, dtheta:0};  // initial conditions
+ let integralErr = 0;                            // for I-action
+ const dt       = 1/120;                         // integration step (s)
+ const pxPerM   = 250;                           // pixels ↔ metres
+ let tSim       = 0;                             // simulated time (s)
+ let run        = false;                         // master play/pause
+ let noiseStd   = 0.005;                         // sensor noise (rad rms)
+ let distGain   = 0.01;                          // disturbance scale
+ 
+ /* ================================================================
+  * 4  GAUSSIAN NOISE & DISTURBANCE GENERATORS
+  *     randn = Box-Muller transform.
+  * ================================================================ */
+ const randn = () => Math.sqrt(-2*Math.log(Math.random())) *
+                     Math.cos(2*Math.PI*Math.random());
+ const n_t   = () => noiseStd * randn();           // encoder noise n(t)
+ const w_t   = t => distGain * (0.5*Math.sin(2*Math.PI*0.7*t) + 0.2*randn());
+                                                     // coloured torque w(t)
+ 
+ /* ================================================================
+  * 5  CONTROLLER DISPATCH
+  *     Each function returns a saturated force F (N).
+  *     Scaling: θ/0.2 brings angle into ±1 p.u.;  θ̇/1 likewise.
+  * ================================================================ */
+ function forceP(theta)            {return -gains.P.Kp  * (theta/0.2);}
+ function forcePI(theta)           {integralErr += theta*dt;
+                                    return -gains.PI.Kp * (theta/0.2)
+                                           -gains.PI.Ki * integralErr;}
+ function forcePD(theta,dtheta)    {return forcePI(-gains.PD.Kp * (theta/0.2)
+                                           -gains.PD.Kd * (dtheta/1));}
+ 
+ function forcePID(theta,dtheta)   {integralErr += theta*dt;
+                                    return -gains.PID.Kp * (theta/0.2)
+                                           -gains.PID.Kd * (dtheta/1)
+                                           -gains.PID.Ki * integralErr;}
+
+ function forceINV(theta,dtheta){ // model-based inner loop
+   const ddtheta_des = -gains.INV.Kp*theta - gains.INV.Kd*dtheta;
+   return (par.M+par.m)*par.l*ddtheta_des - (par.M+par.m)*par.g*theta;
+ }
+ 
+ // — wrapper that chooses the active strategy and enforces ±20 N limit
+ function computeForce(){
+   const mode         = document.getElementById('ctrlSelect').value;
+   const theta_meas   = s.theta + n_t();           // add sensor noise
+   const dtheta_meas  = s.dtheta;                  // assume gyro clean
+   let   F            = 0;
+ 
+   switch(mode){
+     case 'P'  : F = forceP(theta_meas);               break;
+     case 'PI' : F = forcePI(theta_meas);              break;
+     case 'PD' : F = forcePD(theta_meas,dtheta_meas);  break;
+     case 'PID': F = forcePID(theta_meas,dtheta_meas); break;
+     case 'INV': F = forceINV(theta_meas,dtheta_meas); break;
+   }
+ 
+   // — actuator saturation ±20 N and anti-wind-up for I-controllers
+   const satF = Math.max(-20, Math.min(20, F));
+   if (Math.abs(satF-F) > 1e-6 && /I/.test(mode)) integralErr *= 0.95;
+   return satF;
+ }
+ 
+ /* ================================================================
+  * 6  NON-LINEAR DYNAMICS  (Eqs (1) & (2))
+  * ================================================================ */
+ function derivatives(st, F, t){
+   const {M,m,l,g} = par;
+   const sin = Math.sin(st.theta), cos = Math.cos(st.theta);
+   const denom = M + m - m*cos*cos;                   // Eq (1) denominator
+ 
+   const xdd     = ( F + m*l*st.dtheta*st.dtheta*sin - m*g*sin*cos ) / denom;
+   const thetadd = ( g*sin - cos*xdd ) / l + w_t(t);  // add disturbance w(t)
+ 
+   return {dx:st.dx, ddx:xdd, dtheta:st.dtheta, ddtheta:thetadd};
+ }
+ 
+ /* 4th-order Runge-Kutta integrator */
+ function rk4(st, F, h, t){
+   const add = (a,b,k)=>({               // helper: a + k*b
+     x:      a.x      + (b.x      ||0)*k,
+     dx:     a.dx     + (b.dx     ||0)*k,
+     theta:  a.theta  + (b.theta  ||0)*k,
+     dtheta: a.dtheta + (b.dtheta ||0)*k
+   });
+ 
+   const k1 = derivatives(st,         F, t);
+   const k2 = derivatives(add(st,k1,h/2), F, t+h/2);
+   const k3 = derivatives(add(st,k2,h/2), F, t+h/2);
+   const k4 = derivatives(add(st,k3,h  ), F, t+h);
+ 
+   return add(st,{
+     x:      (k1.dx     + 2*k2.dx     + 2*k3.dx     + k4.dx    )/6,
+     dx:     (k1.ddx    + 2*k2.ddx    + 2*k3.ddx    + k4.ddx   )/6,
+     theta:  (k1.dtheta + 2*k2.dtheta + 2*k3.dtheta + k4.dtheta)/6,
+     dtheta: (k1.ddtheta+ 2*k2.ddtheta+ 2*k3.ddtheta+ k4.ddtheta)/6,
+   }, h);
+ }
+ 
+ /* ================================================================
+  * 7  CANVAS RENDERING (track, cart, rod, bob, red force arrow)
+  * ================================================================ */
+ const cvs=document.getElementById('canvas');
+ const ctx=cvs.getContext('2d');
+ const toX = xWorld => cvs.width/2 + xWorld*pxPerM;
+ 
+ function draw(F){
+   ctx.clearRect(0,0,cvs.width,cvs.height);
+ 
+   /* ——— cart ——— */
+   const cartY=cvs.height-20, cartW=40, cartH=25, cartX=toX(s.x)-cartW/2;
+   ctx.fillStyle='#4c9cff';
+   ctx.fillRect(cartX, cartY-cartH, cartW, cartH);
+ 
+   /* ——— pendulum ——— */
+   const pivotX=toX(s.x), pivotY=cartY-cartH;
+   const bobX  =pivotX + Math.sin(s.theta)*par.l*pxPerM;
+   const bobY  =pivotY - Math.cos(s.theta)*par.l*pxPerM;
+   ctx.strokeStyle='#9aa8ff'; ctx.lineWidth=4;
+   ctx.beginPath(); ctx.moveTo(pivotX,pivotY); ctx.lineTo(bobX,bobY); ctx.stroke();
+   ctx.fillStyle='#2d45ff'; ctx.beginPath();
+   ctx.arc(bobX,bobY,10,0,2*Math.PI); ctx.fill();
+ 
+   /* ——— red force arrow ——— */
+   const arrowLen = F * 6;                    // 6 px per N
+   ctx.strokeStyle='red'; ctx.lineWidth=3;
+   ctx.beginPath(); ctx.moveTo(pivotX,cartY-cartH/2);
+   ctx.lineTo(pivotX+arrowLen,cartY-cartH/2); ctx.stroke();  // shaft
+   ctx.beginPath();                             // arrow-head
+   if (F>0){
+     ctx.moveTo(pivotX+arrowLen,cartY-cartH/2);
+     ctx.lineTo(pivotX+arrowLen-8,cartY-cartH/2-4);
+     ctx.lineTo(pivotX+arrowLen-8,cartY-cartH/2+4);
+   }else{
+     ctx.moveTo(pivotX+arrowLen,cartY-cartH/2);
+     ctx.lineTo(pivotX+arrowLen+8,cartY-cartH/2-4);
+     ctx.lineTo(pivotX+arrowLen+8,cartY-cartH/2+4);
+   }
+   ctx.closePath(); ctx.fillStyle='red'; ctx.fill();
+ 
+   /* ——— live read-out ——— */
+   const txt = `/* Horizontal position (m)   */ pendulum.x  = ${s.x.toFixed(2)}
+ /* Horizontal velocity (m/s) */ pendulum.dx = ${s.dx.toFixed(2)}
+ /* Angle from vertical (rad) */ pendulum.theta = ${s.theta.toFixed(3)}
+ /* Angular velocity (rad/s)  */ pendulum.dtheta = ${s.dtheta.toFixed(3)}
+ /* Process torque w(t) (rad/s²) */ w(t) = ${w_t(tSim).toFixed(3)}
+ /* Meas. noise σₙ (rad)      */ σ_n = ${noiseStd.toFixed(4)}
+ /* Simulation time (s)       */ pendulum.T = ${tSim.toFixed(2)}`;
+   document.getElementById('readout').textContent = txt;
+ }
+ 
+ /* ================================================================
+  * 8  MAIN ANIMATION LOOP — requestAnimationFrame keeps
+  *     the frame-rate in sync with the browser refresh  (MDN ref¹)
+  * ================================================================ */
+ function loop(){
+   if(run){
+     const F = computeForce();        // 1. control law
+     s       = rk4(s, F, dt, tSim);   // 2. integrate dynamics
+     tSim   += dt;                    // 3. advance simulation clock
+     draw(F);                         // 4. redraw everything
+   }
+   requestAnimationFrame(loop);       // schedule next frame
+ }
+ requestAnimationFrame(loop);
+ 
+ /* ================================================================
+  * 9  UI HOOKS
+  * ================================================================ */
+ document.getElementById('btnStart').onclick = () =>{
+   run = !run;
+   document.getElementById('btnStart').textContent = run?'Pause':'Start';
+ };
+ document.getElementById('btnReset').onclick = () =>{
+   s = {x:-0.4,dx:0,theta:-0.25,dtheta:0};
+   integralErr = 0; tSim = 0; draw(0);
+ };
+ document.getElementById('noiseSlider').oninput = e =>
+   noiseStd = parseFloat(e.target.value);
+ document.getElementById('distSlider').oninput  = e =>
+   distGain = parseFloat(e.target.value);
+ 
+ /* — first static render — */
+ draw(0);
+ </script>
+ </body>
+ </html>
+ 
