@@ -1,6 +1,12 @@
 # Adaptive Control Coursework
 
-Academic coursework artifacts covering adaptive-control topics. Source code is included for transparency and study reference. Some code was developed with coding-assistant support, so this folder should be read as **coursework exposure**, not a claim of independent authorship of every implementation.
+Academic coursework artifacts covering adaptive-control topics.
 
-- `hw2/`: MATLAB exercises on adaptive-control concepts.
-- `hw3/`: further MATLAB coursework.
+## Subprojects
+- [HW2](hw2/) — MRAC / normalized MIT-rule adaptive-control experiments.
+- [HW3](hw3/) — adaptive augmentation with RBF neural-network compensation and projection/modification variants.
+
+Each homework folder contains its own requirements/run guide.
+
+## Authorship note
+Some code was developed with coding-assistant support, so this folder should be read as coursework exposure rather than a claim of independent authorship of every implementation.

@@ -1,3 +1,10 @@
-# Algorithms & Data Structures
+# Algorithms & Data Structures Coursework
 
-Coursework containing a comparison of maximum-subarray algorithms with different asymptotic complexities and a streaming running-median implementation based on two heaps.
+## Subprojects
+- [Maximum Subarray](maximum-subarray/) — algorithmic complexity comparison through Kadane's algorithm.
+- [Running Median](running-median/) — custom heap/data-stream coursework.
+
+Each subproject contains its own README with requirements and run instructions.
+
+## Authorship note
+Academic coursework artifacts are preserved for study/portfolio reference; see the repository-level authorship note for broader context.
