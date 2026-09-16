@@ -1,0 +1,9 @@
+numpy
+pymprog
+scipy
+sympy
+pulp
+tabulate
+asciitree
+math
+(run on windows CMD the following command: pip install -r requirements.txt)

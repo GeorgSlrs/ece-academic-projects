@@ -1,0 +1,9 @@
+numpy
+matplotlib
+
+# Για H∞ (Hinfinity) controller synthesis:
+control
+slycot
+
+# Προαιρετικά (αν υπάρχει, βοηθάει στο expm):
+scipy

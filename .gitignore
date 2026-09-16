@@ -8,3 +8,22 @@ env/
 .DS_Store
 Thumbs.db
 ~$*
+
+# Local environments, IDE metadata and generated output
+.idea/
+.ipynb_checkpoints/
+.metadata/
+out/
+bin/
+obj/
+slprj/
+*.slxc
+
+# Local credentials and account data
+.env
+.env.*
+!.env.example
+kaggle.json
+credentials.json
+id_rsa
+id_ed25519
